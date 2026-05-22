@@ -1,0 +1,8 @@
+flask==3.0.3
+flask-cors
+twilio==9.3.2
+sqlalchemy==2.0.36
+python-dotenv==1.0.1
+gunicorn==23.0.0
+spacy==3.7.4
+https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.7.0/es_core_news_sm-3.7.0-py3-none-any.whl
