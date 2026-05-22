@@ -48,7 +48,7 @@ ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 client = Client(ACCOUNT_SID, AUTH_TOKEN)
 
-# Cargar modelo spaCy
+# Cargar modelo spaCy de procesamiento lingüístico
 try:
     nlp = spacy.load("es_core_news_sm")
 except:
@@ -57,59 +57,80 @@ except:
 estado_usuarios = {}
 
 MENU = (
-    "Hola, bienvenido a Austral Road SPA. ¿En qué puedo ayudarte?\n"
-    "1. Horario de atención\n"
-    "2. Ubicación\n"
-    "3. Servicios\n"
-    "4. Contacto\n"
-    "5. Hablar con un agente"
+    "Hola, bienvenido a Austral Road SPA. ¿En qué puedo ayudarte?\n\n"
+    "1. Horario de atención 🕐\n"
+    "2. Ubicación 📍\n"
+    "3. Catálogo de Servicios y Precios 🛠️\n"
+    "4. Información de Contacto 📞\n"
+    "5. Hablar con un agente humano 👤"
 )
 
 SUBMENU = (
     "\n\n¿En qué más puedo ayudarte?\n"
-    "1. Horario de atención\n"
-    "2. Ubicación\n"
-    "3. Servicios\n"
-    "4. Contacto\n"
-    "5. Hablar con un agente"
+    "1. Horario · 2. Ubicación · 3. Servicios · 4. Contacto · 5. Agente"
 )
 
-SERVICIOS = (
-    "Nuestros servicios:\n"
-    "3.1 Revisiones técnicas a domicilio — $45.000 (básica) / $75.000 (completa)\n"
-    "3.2 Asesoría de siniestros para aseguradoras — desde $65.000\n"
-    "3.3 Mecánica para empresas — desde $55.000 por vehículo\n\n"
-    "Escribe el número del servicio para más información."
+# Estructura expandida con los 9 subservicios de la empresa (Austral Road SPA)
+SERVICIOS_COMPLETOS = (
+    "🛠️ *CATÁLOGO OFICIAL DE SERVICIOS (Austral Road SPA)*\n\n"
+    "👉 *1. REVISIONES TÉCNICAS A DOMICILIO*\n"
+    "• [1.1] Revisión Básica Particular: $45.000\n"
+    "• [1.2] Revisión Completa Particular: $75.000\n"
+    "• [1.3] Inspección Vehículos de Carga: $95.000\n\n"
+    "👉 *2. ASESORÍA DE SINIESTROS*\n"
+    "• [2.1] Peritaje Técnico Daños Menores: $65.000\n"
+    "• [2.2] Peritaje Técnico Daños Mayores: $120.000\n"
+    "• [2.3] Informe Técnico Oficial Aseguradora: $100.000\n\n"
+    "👉 *3. MECÁNICA PARA EMPRESAS Y FLOTAS*\n"
+    "• [3.1] Mantención Preventiva Flotas: $55.000\n"
+    "• [3.2] Diagnóstico Completo con Escáner OBD: $70.000\n"
+    "• [3.3] Mecánica Correctiva Avanzada: $110.000\n\n"
+    "📍 *Cobertura:* Desde Frutillar hasta la Carretera Austral.\n"
+    "Escribe el código numérico del servicio para iniciar su agendamiento automático."
 )
 
-# Palabras clave por intencion
+# Palabras clave y entidades léxicas por intención (Base del NLP)
 INTENCIONES = {
     'saludo': ['hola', 'buenas', 'buen día', 'buenos días', 'buenas tardes', 'inicio', 'menu', 'ayuda', 'start', 'comenzar'],
-    'horario': ['horario', 'hora', 'cuando', 'atienden', 'abren', 'cierran', 'disponible', 'abierto'],
-    'ubicacion': ['donde', 'ubicación', 'dirección', 'lugar', 'como llegar', 'están', 'queda', 'localización'],
-    'servicios': ['servicio', 'que hacen', 'que ofrecen', 'revisión', 'mecánica', 'siniestro', 'peritaje', 'mantención', 'diagnóstico', 'informe'],
-    'contacto': ['contacto', 'teléfono', 'correo', 'email', 'llamar', 'comunicar', 'número', 'mail'],
-    'agente': ['agente', 'persona', 'humano', 'hablar con alguien', 'ejecutivo', 'asesor', 'ayuda personalizada'],
-    'precio': ['precio', 'costo', 'cuanto', 'valor', 'cobran', 'tarifa', 'cuánto cuesta'],
-    'revision': ['revisión técnica', 'revisar', 'inspección', 'chequeo', 'domicilio'],
-    'siniestro': ['siniestro', 'accidente', 'seguro', 'aseguradora', 'peritaje', 'daño', 'choque'],
-    'mecanica': ['mecánica', 'mecánico', 'empresa', 'flota', 'mantención', 'reparación'],
+    'horario': ['horario', 'hora', 'cuando', 'atienden', 'abren', 'cierran', 'disponible', 'abierto', 'días', 'atención'],
+    'ubicacion': ['donde', 'ubicación', 'dirección', 'lugar', 'como llegar', 'están', 'queda', 'localización', 'mapa', 'puerto montt', 'rucahue'],
+    'servicios': ['servicio', 'que hacen', 'que ofrecen', 'catálogo', 'menú de servicios', 'opciones', 'prestaciones'],
+    'contacto': ['contacto', 'teléfono', 'correo', 'email', 'llamar', 'comunicar', 'número', 'mail', 'whatsapp', 'fono'],
+    'agente': ['agente', 'persona', 'humano', 'hablar con alguien', 'ejecutivo', 'asesor', 'ayuda personalizada', 'asistencia', 'operador'],
+    'precio': ['precio', 'costo', 'cuanto', 'valor', 'cobran', 'tarifa', 'cuánto cuesta', 'presupuesto', 'cotización', 'valores', 'dinero'],
+    'revision_1': ['1.1', 'revisión básica', 'básica particular'],
+    'revision_2': ['1.2', 'revisión completa', 'completa particular'],
+    'revision_3': ['1.3', 'vehículos de carga', 'inspección carga', 'camión'],
+    'siniestro_1': ['2.1', 'peritaje menor', 'daños menores'],
+    'siniestro_2': ['2.2', 'peritaje mayor', 'daños mayores'],
+    'siniestro_3': ['2.3', 'informe técnico', 'aseguradora', 'informe oficial', 'seguro'],
+    'mecanica_1': ['3.1', 'mantención preventiva', 'flotas', 'mantención empresa'],
+    'mecanica_2': ['3.2', 'diagnóstico escáner', 'escáner obd', 'escaner'],
+    'mecanica_3': ['3.3', 'mecánica correctiva', 'correctiva avanzada', 'reparación avanzada'],
 }
 
 def detectar_intencion(texto):
-    texto_lower = texto.lower()
+    texto_lower = texto.lower().strip()
 
-    # Numeros directos
-    if texto_lower.strip() in ['1']: return 'horario'
-    if texto_lower.strip() in ['2']: return 'ubicacion'
-    if texto_lower.strip() in ['3']: return 'servicios'
-    if texto_lower.strip() in ['4']: return 'contacto'
-    if texto_lower.strip() in ['5']: return 'agente'
-    if texto_lower.strip() in ['3.1']: return 'revision'
-    if texto_lower.strip() in ['3.2']: return 'siniestro'
-    if texto_lower.strip() in ['3.3']: return 'mecanica'
+    # Mapeo directo de opciones del menú principal
+    if texto_lower == '1': return 'horario'
+    if texto_lower == '2': return 'ubicacion'
+    if texto_lower == '3' or texto_lower == 'servicios': return 'servicios'
+    if texto_lower == '4': return 'contacto'
+    if texto_lower == '5': return 'agente'
+    
+    # Mapeo directo de subservicios numéricos del catálogo extendido
+    if texto_lower in ['1.1']: return 'revision_1'
+    if texto_lower in ['1.2']: return 'revision_2'
+    if texto_lower in ['1.3']: return 'revision_3'
+    if texto_lower in ['2.1']: return 'siniestro_1'
+    if texto_lower in ['2.2']: return 'siniestro_2'
+    if texto_lower in ['2.3']: return 'siniestro_3'
+    if texto_lower in ['3.1']: return 'mecanica_1'
+    if texto_lower in ['3.2']: return 'mecanica_2'
+    if texto_lower in ['3.3']: return 'mecanica_3'
 
-    # NLP con spaCy si está disponible
+    # Lógica NLP adaptativa con spaCy
     if nlp:
         doc = nlp(texto_lower)
         lemmas = [token.lemma_ for token in doc]
@@ -117,7 +138,7 @@ def detectar_intencion(texto):
     else:
         texto_analizado = texto_lower
 
-    # Buscar intencion por palabras clave
+    # Clasificador basado en matching semántico por palabras clave
     for intencion, palabras in INTENCIONES.items():
         for palabra in palabras:
             if palabra in texto_analizado or palabra in texto_lower:
@@ -129,66 +150,63 @@ def generar_respuesta(intencion, usuario=None):
     if intencion == 'saludo':
         return MENU, 'saludo'
     elif intencion == 'horario':
-        return 'Atendemos de lunes a viernes de 9:00 a 18:00 horas.' + SUBMENU, 'horario'
+        return 'Nuestro horario de atención oficial es de lunes a viernes de 9:00 a 18:00 horas. Sábados y domingos cerrados.' + SUBMENU, 'horario'
     elif intencion == 'ubicacion':
-        return 'Estamos en Villa Rucahue 600, Puerto Montt.' + SUBMENU, 'ubicacion'
-    elif intencion == 'servicios':
-        return SERVICIOS, 'servicios'
+        return 'Nuestras instalaciones centrales y base operativa se ubican en Villa Rucahue 600, Puerto Montt, Región de Los Lagos.' + SUBMENU, 'ubicacion'
+    elif intencion == 'servicios' or intencion == 'precio':
+        return SERVICIOS_COMPLETOS, 'servicios'
     elif intencion == 'contacto':
-        return 'Teléfono: 555-1234\nCorreo: comercialaustralroad@gmail.com' + SUBMENU, 'contacto'
+        return 'Puedes contactarnos directamente vía Teléfono corporativo al: +56 9 5808 4231 o escribirnos al Correo: comercialaustralroad@gmail.com' + SUBMENU, 'contacto'
     elif intencion == 'agente':
         if usuario:
             estado_usuarios[usuario] = 'esperando_nombre'
-        return '¿Cuál es tu nombre para conectarte con un agente?', 'agente'
-    elif intencion == 'precio':
-        return ('Nuestros precios:\n'
-                '• Revisión básica: $45.000\n'
-                '• Revisión completa: $75.000\n'
-                '• Peritaje básico: $65.000\n'
-                '• Peritaje completo: $120.000\n'
-                '• Informe aseguradora: $100.000\n'
-                '• Mantención empresa: $55.000\n'
-                '• Diagnóstico domicilio: $70.000\n'
-                '• Mecánica correctiva: $110.000' + SUBMENU, 'precio')
-    elif intencion == 'revision':
-        return ('Revisiones técnicas a domicilio:\n'
-                '• Básica (particular): $45.000\n'
-                '• Completa (particular): $75.000\n'
-                '• Vehículo de carga: $95.000\n\n'
-                'Coordinamos la visita en el horario que te acomode.' + SUBMENU, 'revision')
-    elif intencion == 'siniestro':
-        return ('Asesoría de siniestros para aseguradoras:\n'
-                '• Peritaje básico: $65.000\n'
-                '• Peritaje completo: $120.000\n'
-                '• Informe técnico oficial: $100.000\n\n'
-                'Incluye documentación fotográfica y respaldo legal.' + SUBMENU, 'siniestro')
-    elif intencion == 'mecanica':
-        return ('Mecánica para empresas:\n'
-                '• Mantención preventiva: $55.000 por vehículo\n'
-                '• Diagnóstico con escáner OBD: $70.000\n'
-                '• Mecánica correctiva básica: $110.000\n\n'
-                'Atendemos flotas empresariales en toda la región.' + SUBMENU, 'mecanica')
+        # IMPORTANTE: Aquí NO concatenamos el SUBMENU para no arruinar el flujo conversacional.
+        return 'Perfecto. Para asignarte un ejecutivo de atención personalizada, ¿cuál es tu nombre completo?', 'agente'
+    
+    # RESPUESTAS DETALLADAS DE AGENDAMIENTO PARA LOS 9 SUBSERVICIOS
+    elif intencion == 'revision_1':
+        return "📋 *Solicitud iniciada:* REVISIÓN BÁSICA PARTICULAR ($45.000).\nIncluye inspección visual de frenos, niveles de fluidos, luces y neumáticos a domicilio. Nuestro sistema procesará tu agenda con la base de datos." + SUBMENU, 'revision_1'
+    elif intencion == 'revision_2':
+        return "📋 *Solicitud iniciada:* REVISIÓN COMPLETA PARTICULAR ($75.000).\nInspección a fondo del tren delantero, suspensión, motorización y reporte completo pre-compra o preventivo a domicilio." + SUBMENU, 'revision_2'
+    elif intencion == 'revision_3':
+        return "📋 *Solicitud iniciada:* INSPECCIÓN VEHÍCULOS DE CARGA ($95.000).\nDiseñado para camiones y furgones comerciales en ruta. Verificación de sistemas neumáticos y de torque operacional." + SUBMENU, 'revision_3'
+    elif intencion == 'siniestro_1':
+        return "📋 *Solicitud iniciada:* PERITAJE TÉCNICO DAÑOS MENORES ($65.000).\nEvaluación de carrocería, ópticos y abolladuras leves con reporte digital para cotización de repuestos." + SUBMENU, 'siniestro_1'
+    elif intencion == 'siniestro_2':
+        return "📋 *Solicitud iniciada:* PERITAJE TÉCNICO DAÑOS MAYORES ($120.000).\nMedición estructural de chasis, evaluación mecánica post-colisión severa y estimación de pérdida." + SUBMENU, 'siniestro_2'
+    elif intencion == 'siniestro_3':
+        return "📋 *Solicitud iniciada:* INFORME TÉCNICO OFICIAL ASEGURADORA ($100.000).\nConfección de dossier legal con registro fotográfico de alta definición y firmas necesarias para la liquidación del seguro." + SUBMENU, 'siniestro_3'
+    elif intencion == 'mecanica_1':
+        return "📋 *Solicitud iniciada:* MANTENCION PREVENTIVA FLOTAS ($55.000 por unidad).\nCambios de filtros, aceites y pautas kilométricas de mantención programada para empresas con operaciones activas." + SUBMENU, 'mecanica_1'
+    elif intencion == 'mecanica_2':
+        return "📋 *Solicitud iniciada:* DIAGNÓSTICO COMPLETO CON ESCÁNER OBD ($70.000).\nLectura en tiempo real de códigos de falla (DTC) del computador del vehículo, borrado de alertas e informe de sensores." + SUBMENU, 'mecanica_2'
+    elif intencion == 'mecanica_3':
+        return "📋 *Solicitud iniciada:* MECÁNICA CORRECTIVA AVANZADA ($110.000).\nIntervención directa en componentes de motor, distribución, embragues o sistemas de transmisión compleja a domicilio." + SUBMENU, 'mecanica_3'
+    
     else:
-        return ('No entendí bien tu consulta. Puedes escribir en lenguaje natural o elegir una opción:\n'
-                '1. Horario  2. Ubicación  3. Servicios  4. Contacto  5. Agente', 'desconocido')
+        return ('No logré identificar la solicitud en lenguaje natural. Puedes intentar reformular tu frase o seleccionar una opción digital marcando del 1 al 5.' + SUBMENU, 'desconocido')
 
 def procesar_mensaje(texto, usuario='web'):
-    # Flujo especial: esperando nombre para agente
+    # Intercepción prioritaria del flujo: Capturar nombre para el agente de soporte
     if estado_usuarios.get(usuario) == 'esperando_nombre':
-        nombre = texto.strip()
-        estado_usuarios.pop(usuario)
-        nueva_solicitud = SolicitudAgente(usuario=usuario, nombre=nombre)
+        nombre_cliente = texto.strip()
+        estado_usuarios.pop(usuario) # Liberamos el estado de bloqueo de este usuario
+        
+        # Persistencia atómica de la solicitud del ejecutivo en la base de datos relacional
+        nueva_solicitud = SolicitudAgente(usuario=usuario, nombre=nombre_cliente)
         try:
             session.add(nueva_solicitud)
             session.commit()
-        except:
+        except Exception as e:
             session.rollback()
-        return (f'Gracias, {nombre}. Un agente de Austral Road SPA se comunicará contigo pronto.' + SUBMENU, 'nombre_agente')
+            print("Error al guardar solicitud de agente:", e)
+            
+        return (f'Muchas gracias, {nombre_cliente}. Hemos registrado tu solicitud en nuestra base de datos. Un ejecutivo comercial de Austral Road SPA tomará el control de esta ventana para continuar la atención personalizada.' + SUBMENU, 'nombre_agente')
 
     intencion = detectar_intencion(texto)
     return generar_respuesta(intencion, usuario)
 
-# ENDPOINT WHATSAPP (Twilio)
+# ENDPOINT AUTOMÁTICO DE WHATSAPP (Integración Twilio)
 @app.route("/bot", methods=['POST'])
 def bot():
     try:
@@ -211,13 +229,13 @@ def bot():
 
     except SQLAlchemyError as e:
         session.rollback()
-        print("Error DB:", e)
-        return str(MessagingResponse().message("Error interno. Intenta nuevamente."))
+        print("Error en Capa de Persistencia DB:", e)
+        return str(MessagingResponse().message("Error en el servidor de base de datos. Intente nuevamente."))
     except Exception as e:
-        print("Error:", e)
-        return str(MessagingResponse().message("Error inesperado. Intenta nuevamente."))
+        print("Error General:", e)
+        return str(MessagingResponse().message("Error inesperado en la pasarela. Intente nuevamente."))
 
-# ENDPOINT WEB
+# ENDPOINT DE DESPLIEGUE WEB (Consola interactiva)
 @app.route("/chat-web", methods=['POST'])
 def chat_web():
     try:
@@ -237,12 +255,12 @@ def chat_web():
         return jsonify({'response': respuesta_texto})
 
     except Exception as e:
-        print("Error:", e)
-        return jsonify({'response': 'Error de conexión. Intenta nuevamente.'}), 500
+        print("Error en API Web:", e)
+        return jsonify({'response': 'Error de comunicación con el clúster. Intente nuevamente.'}), 500
 
 @app.route("/")
 def index():
-    return "Chatbot Austral Road SPA v2.0 activo ✅"
+    return "Chatbot Austral Road SPA v2.0 - Capa Corporativa e Inteligencia Artificial Activa ✅"
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
